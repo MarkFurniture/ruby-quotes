@@ -28,7 +28,7 @@ class Importer
 				'id'		=> i,
 				'added_by'	=> splat.delete_at(0),
 				'added_at'	=> splat.delete_at(0),
-				'quote'		=> splat
+				'quote'		=> splat.join(@conf[:delim])
 			})
 		end
 	end

@@ -2,6 +2,9 @@
 
 require 'socket'
 require 'digest'
+require 'mongo'
+
+include Mongo
 
 $SAFE = 1
 
@@ -11,6 +14,7 @@ if RUBY_VERSION =~ /1.9/
 	Encoding.default_internal = Encoding::UTF_8
 end
 
+### extend existing classes ###
 # string to_b dynamic method
 class String
 	def to_b
@@ -29,8 +33,14 @@ class IRC
 			:nick		=> nick,
 			:channels	=> channels,
 			:qFile 		=> "res/quotes.txt",
-			:qDelim		=> "|"
+			:qDelim		=> "|",
+			:database	=> "quotes",
+			:collection	=> "quotes"
 		}
+
+		mongo_client = MongoClient.new("localhost", 27017)
+		mongo_db = mongo_client.db(@conf[:database])
+		@mongo = mongo_db[@conf[:collection]]
 
 		initialise_messages
 
@@ -40,7 +50,9 @@ class IRC
 	def initialise_messages
 		@messages = {
 			:ping 		=> /^PING :(.+)$/i,
-			:privmsg 	=> /^:(.+)!.+@.+\sPRIVMSG\s(#{@conf[:nick]}|#.+)\s:(.+)$/
+			:privmsg 	=> /^:(.+)!.+@.+\sPRIVMSG\s(#{@conf[:nick]}|#.+)\s:(.+)$/,
+			:nick 		=> /todo/,
+			:join 		=> /todo/
 		}
 	end
 
@@ -60,6 +72,13 @@ class IRC
 	def send(message)
 		@con.send("#{message}\n", 0)
 		#m_out message
+	end
+
+
+	def privmsg(target, message)
+		while (message.length > 0)
+			send "PRIVMSG #{target} :#{message.slice!(0..[message.length-1, 440].min)}"
+		end
 	end
 
 
@@ -84,6 +103,11 @@ class IRC
 
 	### incoming ###
 	def privmsg_in(from, target, message)
+		if message =~ /^!quote(?:\s?(.+))?/
+			quote = get_quote $1
+			privmsg target, quote if quote
+		end
+
 		m_in "<#{from}:#{target}> #{message}"
 	end
 
@@ -106,6 +130,19 @@ class IRC
 	end
 
 	def get_quote(criteria = nil)
+		case criteria
+		when nil
+			n = rand(@mongo.count)
+			result = @mongo.find_one(:id => n)
+		when /^[\d]+$/
+			result = @mongo.find_one(:id => criteria.to_i)
+		else
+			matches = @mongo.find(:quote => /#{criteria}/).to_a
+			result = matches[rand(matches.length)]
+		end
+
+		return "Quote ##{result['id']}: #{result['quote'].chomp} added by #{result['added_by']} at #{result['added_at']}" if result
+		return nil
 	end
 
 
@@ -152,3 +189,5 @@ rescue Exception => detail
 	print detail.backtrace.join("\n")
 	retry
 end
+
+#Quote #391: <Zack|Monster> I just had the best night ever. <Zack|Monster> Any of you guys ever had an explosive climax after a furious fapping session? Not the kind with a dead drunk hawt girl or a high class hooker, but the powerful destructive kind you can only achieve get between yourself and your own hand. <Zack|Monster> With nothing but my right hand, a box of tissues, some lube, and a good porno, I had reached levels of fappage I had neve
