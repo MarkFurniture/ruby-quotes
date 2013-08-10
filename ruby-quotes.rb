@@ -136,12 +136,26 @@ class IRC
 			result = @mongo.find_one(:id => n)
 		when /^[\d]+$/
 			result = @mongo.find_one(:id => criteria.to_i)
+		when /^(on|at)#/
+			date = criteria.split('#').last.split(/[-.\/]/)
+			date_f = [date[0].rjust(4, '20'), date[1].rjust(2, '0'), date[2].rjust(2, '0')]
+			date_r = []
+			date_f.each { |d| date_r << ((d =~ /[\*]/) ? '[\d]{2,4}' : d) }
+
+			matches = @mongo.find(:added_on => /#{date_r.join('-')}/).to_a
+			result = matches[rand(matches.length)]
+		when /^addedby#/
+			matches = @mongo.find(:added_by => /#{criteria.split('#').last}/).to_a
+			result = matches[rand(matches.length)]
+		when /^by#/
+			matches = @mongo.find(:quote => /<#{criteria.split('#').last}>/).to_a
+			result = matches[rand(matches.length)]
 		else
 			matches = @mongo.find(:quote => /#{criteria}/).to_a
 			result = matches[rand(matches.length)]
 		end
 
-		return "Quote ##{result['id']}: #{result['quote'].chomp} added by #{result['added_by']} at #{result['added_at']}" if result
+		return "Quote ##{result['id']}: #{result['quote'].chomp} added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}" if result
 		return nil
 	end
 

@@ -32,8 +32,8 @@ class Importer
 			mongo.insert({
 				'id'		=> i,
 				'added_by'	=> splat.delete_at(0),
-				'added_on'	=> date_format(splat.first.split(', ').last),
-				'added_at'	=> splat.delete_at(0).split(', ').first,
+				'added_on'	=> date_format(splat.first.split(',').last),
+				'added_at'	=> splat.delete_at(0).split(',').first,
 				'quote'		=> splat.join(@conf[:delim]).chomp
 			})
 		end
