@@ -148,7 +148,7 @@ class IRC
 			matches = @mongo.find(:added_by => /#{criteria.split('#').last}/).to_a
 			result = matches[rand(matches.length)]
 		when /^by#/
-			matches = @mongo.find(:quote => /<#{criteria.split('#').last}>/).to_a
+			matches = @mongo.find(:quote => /<[~&@%+]?#{criteria.split('#').last}>/).to_a
 			result = matches[rand(matches.length)]
 		else
 			matches = @mongo.find(:quote => /#{criteria}/).to_a
@@ -203,5 +203,3 @@ rescue Exception => detail
 	print detail.backtrace.join("\n")
 	retry
 end
-
-#Quote #391: <Zack|Monster> I just had the best night ever. <Zack|Monster> Any of you guys ever had an explosive climax after a furious fapping session? Not the kind with a dead drunk hawt girl or a high class hooker, but the powerful destructive kind you can only achieve get between yourself and your own hand. <Zack|Monster> With nothing but my right hand, a box of tissues, some lube, and a good porno, I had reached levels of fappage I had neve
