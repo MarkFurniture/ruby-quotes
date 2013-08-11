@@ -1,5 +1,13 @@
 #!/usr/bin/ruby
 
+# TODO: !addquote
+# TODO: nickserv auth
+# TODO: join
+# TODO: quit
+# TODO: nick
+# TODO: version
+# TODO: ping
+
 require 'socket'
 require 'digest'
 require 'mongo'
@@ -103,9 +111,13 @@ class IRC
 
 	### incoming ###
 	def privmsg_in(from, target, message)
-		if message =~ /^!quote(?:\s?(.+))?/
+		case message
+		when /^!quote(?:\s?(.+))?/
 			quote = get_quote $1
 			privmsg target, quote if quote
+		when /^!addquote\s(.+)/
+			result = addquote from, target, $1
+			privmsg target, result
 		end
 
 		m_in "<#{from}:#{target}> #{message}"
@@ -157,6 +169,21 @@ class IRC
 
 		return "Quote ##{result['id']}: #{result['quote'].chomp} added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}" if result
 		return nil
+	end
+
+	def addquote(from, target, quote)
+		date = Time.now.strftime "%F"
+		time = Time.now.strftime "%H:%M:%S"
+		parsed = {
+			'id'		=> @mongo.count,
+			'added_by'	=> from,
+			'added_on'	=> date,
+			'added_at'	=> time,
+			'quote'		=> quote
+		}
+
+		return "\"#{quote}\" was added to the database at line #{@mongo.count - 1}" if (@mongo.insert(parsed))
+		return "Sorry, there was an error adding the quote to database."
 	end
 
 
