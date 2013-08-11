@@ -25,7 +25,10 @@ class IRC
 			:qDelim		=> "|",
 			:database	=> "quotes",
 			:collection	=> "quotes",
-			:admin		=> "mike"
+			:admin		=> "mike",
+			:n 			=> "\u000F",
+			:c			=> "\u0003",
+			:b			=> "\u0002"
 		}
 
 		mongo_client = MongoClient.new("localhost", 27017)
@@ -40,7 +43,7 @@ class IRC
 	def initialise_messages
 		@messages = {
 			:ping 		=> /^PING :(.+)$/i,
-			:privmsg 	=> /^:(.+)!.+@.+\sPRIVMSG\s(#{@conf[:nick]}|#.+)\s:(.+)$/,
+			:privmsg 	=> /^:(.+)!.+@.+\sPRIVMSG\s(#{@conf[:nick]}|#.+?)\s:(.+)$/,
 			:nick 		=> /^:mike!.+@.+\sPRIVMSG\s#{@conf[:nick]}\s:nick\s(.+)$/,
 			:join 		=> /^:mike!.+@.+\sPRIVMSG\s#{@conf[:nick]}\s:join\s(#.+)$/,
 			:part 		=> /^:mike!.+@.+\sPRIVMSG\s#{@conf[:nick]}\s:part\s(#.+)$/
@@ -123,7 +126,7 @@ class IRC
 
 	### processing ###
 	def handle(message)
-		# puts message
+		#puts message
 		case message.strip
 		when @messages[:ping]
 			pong $1
@@ -139,6 +142,7 @@ class IRC
 			m_in message
 		end
 	end
+
 
 	def get_quote(criteria = nil)
 		total = rand(@mongo.count)
@@ -163,11 +167,11 @@ class IRC
 			matches = @mongo.find(:quote => /<[~&@%+]?#{criteria.split('#').last.force_encoding("UTF-8").gsub(/\s/, "\s").gsub(/[\*]/, '.*')}>/i).to_a
 			result = matches[rand(matches.length)]
 		else
-			matches = @mongo.find(:quote => /#{criteria}/i).to_a
+			matches = @mongo.find(:quote => /#{criteria.gsub(/\:/, '\\:')}/i).to_a
 			result = matches[rand(matches.length)]
 		end
 
-		return "Quote ##{result['id']}/#{total}: #{result['quote'].chomp} added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}" if result
+		return "#{@conf[:c]}04Quote ##{@conf[:n]}#{result['id']}#{@conf[:c]}04/#{@conf[:n]}#{total}#{@conf[:c]}04:#{@conf[:n]} #{result['quote'].chomp} #{@conf[:c]}04added by#{@conf[:n]} #{result['added_by']} #{@conf[:c]}04at#{@conf[:n]} #{result['added_at']} #{@conf[:c]}04on#{@conf[:n]} #{result['added_on']}" if result
 		return nil
 	end
 
