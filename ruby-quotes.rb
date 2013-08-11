@@ -123,12 +123,11 @@ class IRC
 
 	### processing ###
 	def handle(message)
-		puts message
+		# puts message
 		case message.strip
 		when @messages[:ping]
 			pong $1
 		when @messages[:nick]
-			puts "got nick message"
 			nick $1
 		when @messages[:join]
 			join $1
@@ -142,10 +141,11 @@ class IRC
 	end
 
 	def get_quote(criteria = nil)
+		total = rand(@mongo.count)
+
 		case criteria
 		when nil
-			n = rand(@mongo.count)
-			result = @mongo.find_one(:id => n)
+			result = @mongo.find_one(:id => total)
 		when /^[\d]+$/
 			result = @mongo.find_one(:id => criteria.to_i)
 		when /^(on|at)#/
@@ -157,17 +157,17 @@ class IRC
 			matches = @mongo.find(:added_on => /#{date_r.join('-')}/).to_a
 			result = matches[rand(matches.length)]
 		when /^addedby#/
-			matches = @mongo.find(:added_by => /^#{criteria.split('#').last.force_encoding("UTF-8").gsub(/ /, ' ').gsub(/[\*]/, '.*')}$/).to_a
+			matches = @mongo.find(:added_by => /^#{criteria.split('#').last.force_encoding("UTF-8").gsub(/ /, ' ').gsub(/[\*]/, '.*')}$/i).to_a
 			result = matches[rand(matches.length)]
 		when /^by#/
-			matches = @mongo.find(:quote => /<[~&@%+]?#{criteria.split('#').last.force_encoding("UTF-8").gsub(/\s/, "\s").gsub(/[\*]/, '.*')}>/).to_a
+			matches = @mongo.find(:quote => /<[~&@%+]?#{criteria.split('#').last.force_encoding("UTF-8").gsub(/\s/, "\s").gsub(/[\*]/, '.*')}>/i).to_a
 			result = matches[rand(matches.length)]
 		else
-			matches = @mongo.find(:quote => /#{criteria}/).to_a
+			matches = @mongo.find(:quote => /#{criteria}/i).to_a
 			result = matches[rand(matches.length)]
 		end
 
-		return "Quote ##{result['id']}: #{result['quote'].chomp} added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}" if result
+		return "Quote ##{result['id']}/#{total}: #{result['quote'].chomp} added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}" if result
 		return nil
 	end
 
