@@ -1,10 +1,7 @@
 #!/usr/bin/ruby
+# encoding: utf-8
 
-# TODO: !addquote
 # TODO: nickserv auth
-# TODO: join
-# TODO: quit
-# TODO: nick
 # TODO: version
 # TODO: ping
 
@@ -16,25 +13,9 @@ include Mongo
 
 $SAFE = 1
 
-# set UTF8 encoding if ruby 1.9
-if RUBY_VERSION =~ /1.9/
-	Encoding.default_external = Encoding::UTF_8
-	Encoding.default_internal = Encoding::UTF_8
-end
-
-### extend existing classes ###
-# string to_b dynamic method
-class String
-	def to_b
-		return true if (self == true || self =~ (/(true|t|yes|y|1)$/i))
-		return false
-		raise ArgumentError.new("Could not parse boolean: \"#{self}\"")
-	end
-end
-
 # main irc class
 class IRC
-	def initialize(server, port=6667, nick="Pete_Cabbage", channels=[])
+	def initialize(server, port=6667, nick="RubyQuotes", channels=[])
 		@conf = {
 			:server 	=> server,
 			:port		=> port,
@@ -43,7 +24,8 @@ class IRC
 			:qFile 		=> "res/quotes.txt",
 			:qDelim		=> "|",
 			:database	=> "quotes",
-			:collection	=> "quotes"
+			:collection	=> "quotes",
+			:admin		=> "mike"
 		}
 
 		mongo_client = MongoClient.new("localhost", 27017)
@@ -59,8 +41,9 @@ class IRC
 		@messages = {
 			:ping 		=> /^PING :(.+)$/i,
 			:privmsg 	=> /^:(.+)!.+@.+\sPRIVMSG\s(#{@conf[:nick]}|#.+)\s:(.+)$/,
-			:nick 		=> /todo/,
-			:join 		=> /todo/
+			:nick 		=> /^:mike!.+@.+\sPRIVMSG\s#{@conf[:nick]}\s:nick\s(.+)$/,
+			:join 		=> /^:mike!.+@.+\sPRIVMSG\s#{@conf[:nick]}\s:join\s(#.+)$/,
+			:part 		=> /^:mike!.+@.+\sPRIVMSG\s#{@conf[:nick]}\s:part\s(#.+)$/
 		}
 	end
 
@@ -87,6 +70,8 @@ class IRC
 		while (message.length > 0)
 			send "PRIVMSG #{target} :#{message.slice!(0..[message.length-1, 440].min)}"
 		end
+
+		m_out "<#{@conf[:nick]}:#{target}> #{message}"
 	end
 
 
@@ -97,15 +82,22 @@ class IRC
 
 
 	def nick(nick)
-		m_out "Changing nick to #{nick}"
-		initialise_messages
+		@conf[:nick] = nick
 		send "NICK #{@conf[:nick]}"
+		initialise_messages
+		m_out "Changing nick to #{nick}"
 	end
 
 
 	def join(channel)
 		send "JOIN :#{channel}"
 		m_out "Joined #{channel}"
+	end
+
+
+	def part(channel)
+		send "PART :#{channel}"
+		m_out "Parted #{channel}"
 	end
 
 
@@ -131,9 +123,17 @@ class IRC
 
 	### processing ###
 	def handle(message)
+		puts message
 		case message.strip
 		when @messages[:ping]
 			pong $1
+		when @messages[:nick]
+			puts "got nick message"
+			nick $1
+		when @messages[:join]
+			join $1
+		when @messages[:part]
+			part $1
 		when @messages[:privmsg]
 			privmsg_in $1, $2, $3
 		else
@@ -157,10 +157,10 @@ class IRC
 			matches = @mongo.find(:added_on => /#{date_r.join('-')}/).to_a
 			result = matches[rand(matches.length)]
 		when /^addedby#/
-			matches = @mongo.find(:added_by => /#{criteria.split('#').last}/).to_a
+			matches = @mongo.find(:added_by => /^#{criteria.split('#').last.force_encoding("UTF-8").gsub(/ /, ' ').gsub(/[\*]/, '.*')}$/).to_a
 			result = matches[rand(matches.length)]
 		when /^by#/
-			matches = @mongo.find(:quote => /<[~&@%+]?#{criteria.split('#').last}>/).to_a
+			matches = @mongo.find(:quote => /<[~&@%+]?#{criteria.split('#').last.force_encoding("UTF-8").gsub(/\s/, "\s").gsub(/[\*]/, '.*')}>/).to_a
 			result = matches[rand(matches.length)]
 		else
 			matches = @mongo.find(:quote => /#{criteria}/).to_a
@@ -220,7 +220,7 @@ class IRC
 end
 
 # start it up
-ircbot = IRC.new("irc.calindora.com", 6667, "Pete_Cabbage", ["#dog"])
+ircbot = IRC.new("irc.calindora.com", 6667, "DudleySpuds", ["#dog"])
 ircbot.connect
 begin
 	ircbot.main
