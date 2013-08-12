@@ -145,10 +145,11 @@ class IRC
 
 
 	def get_quote(criteria = nil)
-		total = rand(@mongo.count)
+		total = @mongo.count
 
 		case criteria
 		when nil
+			n = rand(@mongo.count)
 			result = @mongo.find_one(:id => total)
 		when /^[\d]+$/
 			result = @mongo.find_one(:id => criteria.to_i)
@@ -171,7 +172,9 @@ class IRC
 			result = matches[rand(matches.length)]
 		end
 
-		return "#{@conf[:c]}04Quote ##{@conf[:n]}#{result['id']}#{@conf[:c]}04/#{@conf[:n]}#{total}#{@conf[:c]}04:#{@conf[:n]} #{result['quote'].chomp} #{@conf[:c]}04added by#{@conf[:n]} #{result['added_by']} #{@conf[:c]}04at#{@conf[:n]} #{result['added_at']} #{@conf[:c]}04on#{@conf[:n]} #{result['added_on']}" if result
+		#return "#{@conf[:c]}04Quote ##{@conf[:n]}#{result['id']}#{@conf[:c]}04/#{@conf[:n]}#{total}#{@conf[:c]}04:#{@conf[:n]} #{result['quote'].chomp} #{@conf[:c]}04added by#{@conf[:n]} #{result['added_by']} #{@conf[:c]}04at#{@conf[:n]} #{result['added_at']} #{@conf[:c]}04on#{@conf[:n]} #{result['added_on']}" if result
+		#return "Quote ##{@conf[:n]}#{result['id']}#{@conf[:c]}04/#{@conf[:n]}#{total}#{@conf[:c]}04:#{@conf[:n]} #{result['quote'].chomp} #{@conf[:c]}04added by#{@conf[:n]} #{result['added_by']} #{@conf[:c]}04at#{@conf[:n]} #{result['added_at']} #{@conf[:c]}04on#{@conf[:n]} #{result['added_on']}" if result
+		return "Quote ##{result['id']}/#{total}: #{@conf[:c]}04#{result['quote'].chomp} #{@conf[:n]}added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}" if result
 		return nil
 	end
 
