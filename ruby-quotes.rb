@@ -26,6 +26,7 @@ class IRC
 			:database	=> "quotes",
 			:collection	=> "quotes",
 			:admin		=> "mike",
+			:maxlen		=> 440,
 			:n 			=> "\u000F",
 			:c			=> "\u0003",
 			:b			=> "\u0002"
@@ -71,7 +72,7 @@ class IRC
 
 	def privmsg(target, message)
 		while (message.length > 0)
-			send "PRIVMSG #{target} :#{message.slice!(0..[message.length-1, 440].min)}"
+			send "PRIVMSG #{target} :#{message.slice!(0..[message.length-1, @conf[:maxlen]].min)}"
 		end
 
 		m_out "<#{@conf[:nick]}:#{target}> #{message}"
@@ -167,6 +168,10 @@ class IRC
 		when /^by#/
 			matches = @mongo.find(:quote => /<[~&@%+]?#{criteria.split('#').last.force_encoding("UTF-8").gsub(/\s/, "\s").gsub(/[\*]/, '.*')}>/i).to_a
 			result = matches[rand(matches.length)]
+		# TODO: Add quote length in database and allow searching on it
+		when /^len#/
+			matches = @mongo.find(:quote => /<[~&@%+]?#{criteria.split('#').last.force_encoding("UTF-8").gsub(/\s/, "\s").gsub(/[\*]/, '.*')}>/i).to_a
+			result = matches[rand(matches.length)]
 		else
 			matches = @mongo.find(:quote => /#{criteria.gsub(/\:/, '\\:')}/i).to_a
 			result = matches[rand(matches.length)]
@@ -174,7 +179,8 @@ class IRC
 
 		#return "#{@conf[:c]}04Quote ##{@conf[:n]}#{result['id']}#{@conf[:c]}04/#{@conf[:n]}#{total}#{@conf[:c]}04:#{@conf[:n]} #{result['quote'].chomp} #{@conf[:c]}04added by#{@conf[:n]} #{result['added_by']} #{@conf[:c]}04at#{@conf[:n]} #{result['added_at']} #{@conf[:c]}04on#{@conf[:n]} #{result['added_on']}" if result
 		#return "Quote ##{@conf[:n]}#{result['id']}#{@conf[:c]}04/#{@conf[:n]}#{total}#{@conf[:c]}04:#{@conf[:n]} #{result['quote'].chomp} #{@conf[:c]}04added by#{@conf[:n]} #{result['added_by']} #{@conf[:c]}04at#{@conf[:n]} #{result['added_at']} #{@conf[:c]}04on#{@conf[:n]} #{result['added_on']}" if result
-		return "Quote ##{result['id']}/#{total}: #{@conf[:c]}04#{result['quote'].chomp} #{@conf[:n]}added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}" if result
+		return "Quote ##{result['id']}/#{total}: #{@conf[:c]}04#{result['quote'].chomp} #{@conf[:n]}added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}".scan(/.{#{@conf[:maxlen]+1}}|.+/).join("#{@conf[:c]}04") if result
+
 		return nil
 	end
 
