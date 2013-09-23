@@ -44,9 +44,6 @@ class Importer
 				'quote'		=> quote['quote']
 			})
 
-			# puts "inserting: #{quote['quote']}" if (existing.nil?)
-			# puts "not inserting: #{quote['quote']}" if (!existing.nil?)
-
 			mongo.insert(quote) if (existing.nil?)
 		end
 	end
