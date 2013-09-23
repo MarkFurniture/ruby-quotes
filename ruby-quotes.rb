@@ -4,6 +4,9 @@
 # TODO: nickserv auth
 # TODO: version
 # TODO: ping
+# TODO: external config
+# TODO: custom formats
+
 
 require 'socket'
 require 'digest'
@@ -13,23 +16,54 @@ include Mongo
 
 $SAFE = 1
 
+# class to grab config from file
+# class Config
+# 	def initialize(filename)
+# 		@config_file = filename
+# 		@config = {}
+# 	end
+
+# 	def parse
+# 		@config_file
+# 	end
+# end
+
 # main irc class
 class IRC
-	def initialize(server, port=6667, nick="RubyQuotes", channels=[])
-		@conf = {
-			:server 	=> server,
-			:port		=> port,
-			:nick		=> nick,
-			:channels	=> channels,
-			:qFile 		=> "res/quotes.txt",
+	def initialize(server, port=6667, nick="RubyQuotes", channels=[], conf='ruby-quotes.conf')
+		# conf_file = new Config.new(conf)
+		conf_file = {}
+
+		defaults = {
+			:server		=> 'irc.calindora.com',
+			:port		=> 6667,
+			:nick		=> 'DudleySpuds',
+			:channels	=> ['#dog'],
+			:qFile		=> "res/quotes.txt",
 			:qDelim		=> "|",
 			:database	=> "quotes",
 			:collection	=> "quotes",
 			:admin		=> "mike",
 			:maxlen		=> 440,
-			:n 			=> "\u000F",
-			:c			=> "\u0003",
-			:b			=> "\u0002"
+			:norm		=> "\u000F",
+			:col		=> "\u0003",
+			:bold		=> "\u0002"
+		}
+
+		@conf = {
+			:server 	=> conf_file[:server]		? conf_file[:server]		: defaults[:server],
+			:port		=> conf_file[:port]			? conf_file[:port]			: defaults[:port],
+			:nick		=> conf_file[:nick]			? conf_file[:nick]			: defaults[:nick],
+			:channels	=> conf_file[:channels]		? conf_file[:channels]		: defaults[:channels],
+			:qFile 		=> conf_file[:qFile]		? conf_file[:qFile]			: defaults[:qFile],
+			:qDelim		=> conf_file[:qDelim]		? conf_file[:qDelim]		: defaults[:qDelim],
+			:database	=> conf_file[:database]		? conf_file[:database]		: defaults[:database],
+			:collection	=> conf_file[:collection]	? conf_file[:collection]	: defaults[:collection],
+			:admin		=> conf_file[:admin]		? conf_file[:admin]			: defaults[:admin],
+			:maxlen		=> conf_file[:maxlen]		? conf_file[:maxlen]		: defaults[:maxlen],
+			:norm		=> conf_file[:norm]			? conf_file[:norm]			: defaults[:norm],
+			:col		=> conf_file[:col]			? conf_file[:col]			: defaults[:col],
+			:bold		=> conf_file[:bold]			? conf_file[:bold]			: defaults[:bold]
 		}
 
 		mongo_client = MongoClient.new("localhost", 27017)
@@ -179,7 +213,7 @@ class IRC
 
 		#return "#{@conf[:c]}04Quote ##{@conf[:n]}#{result['id']}#{@conf[:c]}04/#{@conf[:n]}#{total}#{@conf[:c]}04:#{@conf[:n]} #{result['quote'].chomp} #{@conf[:c]}04added by#{@conf[:n]} #{result['added_by']} #{@conf[:c]}04at#{@conf[:n]} #{result['added_at']} #{@conf[:c]}04on#{@conf[:n]} #{result['added_on']}" if result
 		#return "Quote ##{@conf[:n]}#{result['id']}#{@conf[:c]}04/#{@conf[:n]}#{total}#{@conf[:c]}04:#{@conf[:n]} #{result['quote'].chomp} #{@conf[:c]}04added by#{@conf[:n]} #{result['added_by']} #{@conf[:c]}04at#{@conf[:n]} #{result['added_at']} #{@conf[:c]}04on#{@conf[:n]} #{result['added_on']}" if result
-		return "Quote ##{result['id']}/#{total}: #{@conf[:c]}04#{result['quote'].chomp} #{@conf[:n]}added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}".scan(/.{#{@conf[:maxlen]+1}}|.+/).join("#{@conf[:c]}04") if result
+		return "Quote ##{result['id']}/#{total}: #{@conf[:col]}04#{result['quote'].chomp} #{@conf[:norm]}added by #{result['added_by']} at #{result['added_at']} on #{result['added_on']}".scan(/.{#{@conf[:maxlen]+1}}|.+/).join("#{@conf[:col]}04") if result
 
 		return nil
 	end
@@ -233,7 +267,7 @@ class IRC
 end
 
 # start it up
-ircbot = IRC.new("irc.calindora.com", 6667, "DudleySpuds", ["#dog"])
+ircbot = IRC.new("irc.calindora.com", 6667, "DudleySpuds", ["#dog"], 'ruby-quotes.conf')
 ircbot.connect
 begin
 	ircbot.main
