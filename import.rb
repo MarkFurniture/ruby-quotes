@@ -1,3 +1,5 @@
+#!/usr/bin/ruby
+
 # encoding: utf-8
 require 'mongo'
 
@@ -22,7 +24,7 @@ class Importer
 		return "20#{date_array[2]}-#{date_array[1]}-#{date_array[0]}"
 	end
 
-	def import
+	def import(start_id = 1)
 		mongo_client = MongoClient.new("localhost")
 		mongo_db = mongo_client.db(@conf[:database])
 		mongo = mongo_db[@conf[:collection]]
@@ -30,13 +32,22 @@ class Importer
 		@lines.each_with_index do |line, i|
 			splat = line.split(@conf[:delim])
 
-			mongo.insert({
-				'id'		=> i,
-				'added_by'	=> splat.delete_at(0).gsub(/ /, ' '),
+			quote = {
+				'id'		=> i + start_id,
+				'added_by'	=> splat.delete_at(0).gsub(/160.chr/, ' '),
 				'added_on'	=> date_format(splat.first.split(',').last),
 				'added_at'	=> splat.delete_at(0).split(',').first,
 				'quote'		=> splat.join(@conf[:delim]).chomp
+			}
+
+			existing = mongo.find_one({
+				'quote'		=> quote['quote']
 			})
+
+			# puts "inserting: #{quote['quote']}" if (existing.nil?)
+			# puts "not inserting: #{quote['quote']}" if (!existing.nil?)
+
+			mongo.insert(quote) if (existing.nil?)
 		end
 	end
 end
