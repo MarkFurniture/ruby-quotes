@@ -185,7 +185,7 @@ class IRC
 		case criteria
 		when nil
 			n = rand(@mongo.count)
-			result = @mongo.find_one(:id => total)
+			result = @mongo.find_one(:id => n)
 		when /^[\d]+$/
 			result = @mongo.find_one(:id => criteria.to_i)
 		when /^(on|at)#/
